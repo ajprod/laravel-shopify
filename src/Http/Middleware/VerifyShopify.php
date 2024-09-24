@@ -23,7 +23,6 @@ use Osiset\ShopifyApp\Objects\Values\SessionContext;
 use Osiset\ShopifyApp\Objects\Values\SessionToken;
 use Osiset\ShopifyApp\Objects\Values\ShopDomain;
 use Osiset\ShopifyApp\Util;
-use Illuminate\Support\Facades\Log;
 
 /**
  * Responsible for validating the request.
@@ -97,7 +96,7 @@ class VerifyShopify
             throw new SignatureVerificationException('Unable to verify signature.');
         }
 
-        // Continue if current route is an auth or billing route 
+        // Continue if current route is an auth or billing route
         if (Str::contains($request->getRequestUri(), ['/authenticate', '/billing'])) {
             return $next($request);
         }
@@ -114,8 +113,6 @@ class VerifyShopify
         }
 
         $tokenSource = $this->getAccessTokenFromRequest($request);
-
-        Log::info('Token source: '.$tokenSource);
 
         if ($tokenSource === null) {
             //Check if there is a store record in the database
@@ -163,8 +160,6 @@ class VerifyShopify
      */
     protected function handleMissingToken(Request $request)
     {
-
-        Log::info('Redirecting to token route (missing token)');
         if ($this->isApiRequest($request)) {
             // AJAX, return HTTP exception
             throw new HttpException(SessionToken::EXCEPTION_INVALID, Response::HTTP_BAD_REQUEST);
@@ -194,8 +189,6 @@ class VerifyShopify
             );
         }
 
-        Log::info('Redirecting to token route (invalid token)');
-
         return $this->tokenRedirect($request);
     }
 
@@ -210,8 +203,6 @@ class VerifyShopify
      */
     protected function handleInvalidShop(Request $request)
     {
-        Log::info('Redirecting to install route');
-
         if ($this->isApiRequest($request)) {
             // AJAX, return HTTP exception
             throw new HttpException('Shop is not installed or missing data.', Response::HTTP_FORBIDDEN);
@@ -314,6 +305,7 @@ class VerifyShopify
                 'shop' => ShopDomain::fromRequest($request)->toNative(),
                 'target' => $target,
                 'host' => $request->get('host'),
+                'locale' => $request->get('locale'),
             ]
         );
     }
@@ -329,7 +321,7 @@ class VerifyShopify
     {
         return Redirect::route(
             Util::getShopifyConfig('route_names.authenticate'),
-            ['shop' => $shopDomain->toNative(), 'host' => request('host')]
+            ['shop' => $shopDomain->toNative(), 'host' => request('host'), 'locale' => request('locale')]
         );
     }
 
@@ -398,13 +390,7 @@ class VerifyShopify
             return $request->get('token');
         }
 
-        $id_token = $this->isApiRequest($request) 
-        ? $request->bearerToken() 
-        : ($request->get('token') ?? $request->get('id_token'));
-
-        Log::info('Token get: '.$id_token);
-
-        return $id_token;
+        return $this->isApiRequest($request) ? $request->bearerToken() : $request->get('token');
     }
 
     /**
