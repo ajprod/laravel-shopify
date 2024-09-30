@@ -23,6 +23,7 @@ use Osiset\ShopifyApp\Objects\Values\SessionContext;
 use Osiset\ShopifyApp\Objects\Values\SessionToken;
 use Osiset\ShopifyApp\Objects\Values\ShopDomain;
 use Osiset\ShopifyApp\Util;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Responsible for validating the request.
@@ -89,9 +90,11 @@ class VerifyShopify
      */
     public function handle(Request $request, Closure $next)
     {
+
         // Verify the HMAC (if available)
         $hmacResult = $this->verifyHmac($request);
         if ($hmacResult === false) {
+
             // Invalid HMAC
             throw new SignatureVerificationException('Unable to verify signature.');
         }
@@ -390,7 +393,17 @@ class VerifyShopify
             return $request->get('token');
         }
 
-        return $this->isApiRequest($request) ? $request->bearerToken() : $request->get('token');
+        if ($this->isApiRequest($request)) {
+            return $request->bearerToken();
+        } else {
+
+            if ($request->get('token')) {
+                return $request->get('token');
+            } elseif ($request->get('id_token')) {
+                return $request->get('id_token');
+            } 
+
+        }
     }
 
     /**
