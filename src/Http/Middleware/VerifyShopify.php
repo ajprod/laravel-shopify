@@ -395,15 +395,9 @@ class VerifyShopify
 
         if ($this->isApiRequest($request)) {
             return $request->bearerToken();
-        } else {
-
-            if ($request->get('token')) {
-                return $request->get('token');
-            } elseif ($request->get('id_token')) {
-                return $request->get('id_token');
-            } 
-
         }
+        
+        return $request->get('token') ?? $request->get('id_token');
     }
 
     /**
